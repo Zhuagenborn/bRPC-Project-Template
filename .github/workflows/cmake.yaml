@@ -1,0 +1,54 @@
+name: Build the project with CMake on Ubuntu
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '!docs/**'
+      - '.github/workflows/cmake.yaml'
+      - 'server/**'
+      - 'client/**'
+      - 'proto/**'
+      - '**/CMakeLists.txt'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - '!docs/**'
+      - '.github/workflows/cmake.yaml'
+      - 'server/**'
+      - 'client/**'
+      - 'proto/**'
+      - '**/CMakeLists.txt'
+jobs:
+  cmake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download package information
+        run: sudo apt-get update
+      - name: Install GCC
+        run: sudo apt-get install -y g++
+      - name: Install CMake
+        run: sudo apt-get install -y cmake
+      - name: Install bRPC dependencies
+        run: |
+          sudo apt-get install -y libgflags-dev
+          sudo apt-get install -y libprotobuf-dev
+          sudo apt-get install -y libprotoc-dev
+          sudo apt-get install -y protobuf-compiler
+          sudo apt-get install -y libleveldb-dev
+          sudo apt-get install -y libssl-dev
+      - name: Check out the repository
+        uses: actions/checkout@main
+      - name: Clone bRPC
+        run: git clone https://github.com/apache/brpc.git
+      - name: Build bRPC
+        run: |
+          cd brpc
+          sh config_brpc.sh --headers=/usr/include --libs=/usr/lib
+          make
+      - name: Build echo service
+        working-directory: ${{github.workspace}}
+        run: |
+          mkdir build
+          cd build
+          cmake -DBRPC_INSTALL_DIR=${{github.workspace}}/brpc/output ..
+          cmake --build .
